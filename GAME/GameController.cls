@@ -53,13 +53,14 @@ public class GameController {
         newPlayer = new Game_Unit__c();
         enemy = new Game_Unit__c();
         players = new List<WrapPlayer>();
-        
+            
         for(Game_Unit__c hero :[SELECT name, Death_Date__c FROM Game_Unit__c]){
            WrapPlayer wrPlay = new WrapPlayer();
            wrPlay.unit = hero; 
            wrPlay.isSelected = false;
-            //Check whether the personage was killed less than a day ago
-            if((hero.Death_Date__c == null)|| ((hero.Death_Date__c.Date().daysBetween(datetime.now().Date()))>=1))
+                 
+            //Check whether the personage was killed less than 24 hoursago
+            if((hero.Death_Date__c == null)|| ((Decimal.valueOf((datetime.now().getTime() - hero.Death_Date__c.getTime())/(60*60*1000)))>24))
             players.add(wrPlay); 
         }
     }
@@ -145,14 +146,19 @@ public class GameController {
                     //Looser name
                     String looserName = null;
                     
+                    //Looser name
+                    String winnerName = null;
+                    
                     //Determine who is the winner and return appropriete message
                     if (newPlayer.HP__c > 0){
-                        looserName = enemy.name;                       
+                        looserName = enemy.name; 
+                        winnerName = newPlayer.name;
                         winnerMessage = 'Congratulation! You are the winner! Left Health Point is ' + newPlayer.HP__c;
                     }
         		     
                     else if (enemy.HP__c > 0){
                         looserName = newPlayer.name;
+                        winnerName = enemy.name;
                         winnerMessage = 'Game over! You loose ! The winner is '+ enemy.name;
                     }
             	        
@@ -160,12 +166,25 @@ public class GameController {
                     winnerMessage = 'No Winners...It was equal Game!';
                     
                     //Assing Date of death to loser
-                        List<Game_Unit__c> temp = new List<Game_Unit__c>([SELECT id, name, Death_Date__c
-                                                                         FROM Game_Unit__c 
-                                                                         WHERE name=:looserName 
-                                                                         LIMIT 1]); 
-                        temp[0].Death_date__C = datetime.now();
-                        update temp;
+                     Game_Unit__c looser = [SELECT id, name, Death_Date__c
+                                           FROM Game_Unit__c 
+                                           WHERE name=:looserName 
+                                           LIMIT 1]; 
+                        looser.Death_date__C = datetime.now();
+                        update looser;
+                    
+                    //Adding Win to Winner
+                    Game_Unit__c winner =[SELECT id, name, Death_Date__c, Wins__c
+                                          FROM Game_Unit__c 
+                                          WHERE name=:winnerName 
+                                          LIMIT 1]; 
+                    
+                    if(winner.Wins__c == null)
+                        winner.Wins__c = 1;
+                    else
+                    winner.Wins__c++;
+                    
+                    update winner;
                     
                     showWinner = true;
             
